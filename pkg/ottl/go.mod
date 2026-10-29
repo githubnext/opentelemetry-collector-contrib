@@ -1,5 +1,8 @@
 module github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl
 
+// Experimental, production-version-compatible pdata key rename API.
+replace go.opentelemetry.io/collector/pdata => github.com/githubnext/opentelemetry-collector/pdata v0.0.0-20261029201812-60bcbb1441e0
+
 go 1.26.0
 
 require (

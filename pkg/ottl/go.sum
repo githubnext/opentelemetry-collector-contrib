@@ -17,6 +17,8 @@ github.com/elastic/go-grok v0.3.1 h1:WEhUxe2KrwycMnlvMimJXvzRa7DoByJB4PVUIE1ZD/U
 github.com/elastic/go-grok v0.3.1/go.mod h1:n38ls8ZgOboZRgKcjMY8eFeZFMmcL9n2lP0iHhIDk64=
 github.com/elastic/lunes v0.2.2 h1:dZFEaebNg9l+mzvOQN6Nd/c9y6y8rUe3tBWsTgvM08U=
 github.com/elastic/lunes v0.2.2/go.mod h1:u3W/BdONWTrh0JjNZ21C907dDc+cUZttZrGa625nf2k=
+github.com/githubnext/opentelemetry-collector/pdata v0.0.0-20261029201812-60bcbb1441e0 h1:E/fWoV5IQ11ENty/uA+mmp0MdYmO1WjmhAjZt7qYV2Q=
+github.com/githubnext/opentelemetry-collector/pdata v0.0.0-20261029201812-60bcbb1441e0/go.mod h1:2CSCUtdgTXIGIk7GXoYuBZG2VjkrTzqcGIh6ukgXLwc=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.4.4 h1:tG4xh9yMsRCAiodLVTxyrkzSZ9+o0L1Kg/+cPVcbP/8=
 github.com/go-logr/logr v1.4.4/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
@@ -89,8 +91,6 @@ go.opentelemetry.io/collector/featuregate v1.67.0 h1:x6aIJtcU7hp37lLutdbUyi2x7CA
 go.opentelemetry.io/collector/featuregate v1.67.0/go.mod h1:dRYifiJa2vQ6LWpPwHny4mL82mnGWsWEVeVWw+DhYJw=
 go.opentelemetry.io/collector/internal/testutil v0.161.0 h1:eNQHH/z5E6M15aQ409cF9j1Q49GOIJDhvcgNXSnxRZk=
 go.opentelemetry.io/collector/internal/testutil v0.161.0/go.mod h1:FV43FoAsh4fP615Sc5ZSh7iPMgZaSgha6ngavix9OEI=
-go.opentelemetry.io/collector/pdata v1.67.0 h1:dL654J7PNHc6EGHRa7j6gYtbSDBC7zs8Xl6Dcn4XH2E=
-go.opentelemetry.io/collector/pdata v1.67.0/go.mod h1:2CSCUtdgTXIGIk7GXoYuBZG2VjkrTzqcGIh6ukgXLwc=
 go.opentelemetry.io/collector/pdata/pprofile v0.161.0 h1:69LCTV6/WcKM/sOCa4hSKX1fzcbag/4MenbRS6OoRA0=
 go.opentelemetry.io/collector/pdata/pprofile v0.161.0/go.mod h1:gusNvsJ88nRPRq4F3Azjep37O55EENifSiuwE1p1Zk0=
 go.opentelemetry.io/collector/pdata/testdata v0.161.0 h1:tmAuvlZYTF+OY070r4bhAcaH2eFw2WBPgdk/N3n0pq8=

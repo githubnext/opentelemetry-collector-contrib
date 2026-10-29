@@ -7,6 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"regexp/syntax"
+	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -50,6 +53,14 @@ func replaceAllPatterns[K any](target ottl.PMapGetSetter[K], mode string, regexP
 		return nil, fmt.Errorf("invalid mode %v, must be either 'key' or 'value'", mode)
 	}
 
+	var rewriteKeys func(pcommon.Map) (bool, error)
+	if replacementValue, literal := ottl.GetLiteralValue(replacement); mode == modeKey && compiledPattern.value != nil && literal && fn.IsEmpty() {
+		rewriteKeys, err = newKeyPatternRewriter(compiledPattern.value, replacementValue)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return func(ctx context.Context, tCtx K) (any, error) {
 		val, err := target.Get(ctx, tCtx)
 		if err != nil {
@@ -84,6 +95,15 @@ func replaceAllPatterns[K any](target ottl.PMapGetSetter[K], mode string, regexP
 				}
 			}
 		case modeKey:
+			if rewriteKeys != nil {
+				rewritten, err := rewriteKeys(val)
+				if err != nil {
+					return nil, err
+				}
+				if rewritten {
+					break
+				}
+			}
 			// Because we are changing the keys we cannot do in-place update, but we can move values to the
 			// updated map and then move back the updated map to the initial map to avoid a copy in the target.Set,
 			// because the pcommon.Map.CopyTo will not do a copy if it is the same object in this case val.
@@ -107,5 +127,56 @@ func replaceAllPatterns[K any](target ottl.PMapGetSetter[K], mode string, regexP
 			updated.MoveTo(val)
 		}
 		return nil, target.Set(ctx, tCtx, val)
+	}, nil
+}
+
+func newKeyPatternRewriter(pattern *regexp.Regexp, replacement string) (func(pcommon.Map) (bool, error), error) {
+	matchKey := pattern.MatchString
+	replaceKey := func(key string) string { return pattern.ReplaceAllString(key, replacement) }
+	parsed, err := syntax.Parse(pattern.String(), syntax.Perl)
+	if err != nil {
+		return nil, err
+	}
+	asciiLiteral := parsed.Op == syntax.OpLiteral && parsed.Flags&syntax.FoldCase == 0
+	for _, r := range parsed.Rune {
+		if r > 127 {
+			asciiLiteral = false
+			break
+		}
+	}
+	if asciiLiteral {
+		literal := string(parsed.Rune)
+		matchKey = func(key string) bool { return strings.Contains(key, literal) }
+		if !strings.Contains(replacement, "$") {
+			replaceKey = func(key string) string { return strings.ReplaceAll(key, literal, replacement) }
+		}
+	}
+	return func(attributes pcommon.Map) (bool, error) {
+		type rename struct{ from, to string }
+		var changes []rename
+		for key := range attributes.All() {
+			if !matchKey(key) {
+				continue
+			}
+			updated := replaceKey(key)
+			if updated == key {
+				continue
+			}
+			if _, exists := attributes.Get(updated); exists {
+				return false, nil
+			}
+			for _, change := range changes {
+				if change.to == updated {
+					return false, nil
+				}
+			}
+			changes = append(changes, rename{from: key, to: updated})
+		}
+		for _, change := range changes {
+			if !attributes.RenameKey(change.from, change.to) {
+				return false, fmt.Errorf("cannot rename validated map key %q to %q", change.from, change.to)
+			}
+		}
+		return true, nil
 	}, nil
 }
