@@ -23,6 +23,32 @@ This package implements everything necessary to use OTTL in a Collector componen
 - [Resources](#resources)
 
 
+## Experimental fork dependency
+
+This branch optimizes constant-pattern, constant-replacement key rewrites in
+`replace_all_patterns`. It renames collision-free keys in place without changing
+entry order; collisions, dynamic arguments, and optional replacement functions
+retain the existing implementation.
+
+The module temporarily replaces `go.opentelemetry.io/collector/pdata` with
+[an immutable core fork commit](https://github.com/githubnext/opentelemetry-collector/commit/ddcee489695e2477e395649dcdd5fcfbd2870e28)
+providing `pcommon.Map.RenameKey`. This is an experimental dependency, not an
+upstream release. Remove the replacement when a released dependency provides
+the API. Consumers must apply the same replacement in their main module because
+Go does not inherit dependency modules' replacements.
+
+From `pkg/ottl`, validate without a local Go workspace:
+
+```sh
+GOWORK=off go test -race ./...
+GOWORK=off go vet ./...
+GOWORK=off go test -run '^$' -bench '^BenchmarkReplaceAllPatternsKeys$' -benchmem -count=6 ./ottlfuncs
+```
+
+The microbenchmark includes input copying and exercises matching, non-matching,
+and colliding keys at three map sizes. It is not a representative Collector
+workload or a fleet CPU-savings estimate.
+
 ## Getting Started
 
 An OTTL statement is made up of 2 parts:

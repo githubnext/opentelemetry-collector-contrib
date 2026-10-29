@@ -29,7 +29,7 @@ require (
 	go.uber.org/zap v1.28.0
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 	golang.org/x/text v0.43.0
-	google.golang.org/grpc v1.84.0
+	google.golang.org/grpc v1.85.0
 )
 
 require (
@@ -71,3 +71,6 @@ retract (
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest => ../pdatatest
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden => ../golden
+
+// Experimental fork dependency providing pcommon.Map.RenameKey.
+replace go.opentelemetry.io/collector/pdata => github.com/githubnext/opentelemetry-collector/pdata v0.0.0-20261029195639-ddcee489695e
