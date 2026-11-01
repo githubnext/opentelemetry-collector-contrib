@@ -69,6 +69,11 @@ Interleave repetitions, retain raw observations, and report regression cases.
 
 ## Reproduce an individual source improvement
 
+Source patches retain surrounding context and must apply cleanly to the pinned
+dependencies. Zero-context patches are unsafe across source versions: an
+insertion can land at the wrong line and change control flow while still
+compiling. An incompatible patch fails explicitly instead.
+
 [compare.py](compare.py) uses Python 3's standard library, Git and Go. Run it
 from this directory, with `--output` outside the source tree. It copies the
 baseline dependencies before applying only the named production-file diff,

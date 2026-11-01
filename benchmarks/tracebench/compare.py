@@ -42,6 +42,15 @@ def run(command, cwd, env, log):
     return result.stdout
 
 
+def apply_source_patch(source, patch_file, strip, env, log):
+    hunks = re.split(r"(?m)^@@[^\n]*\n", patch_file.read_text())[1:]
+    if not hunks or any(not any(line.startswith(" ") for line in hunk.splitlines())
+                        for hunk in hunks):
+        raise ValueError("Source patches require surrounding context in every hunk")
+    run(["git", "apply", "--no-index", f"-p{strip}", str(patch_file)],
+        source, env, log)
+
+
 def interval(ratios):
     if len(ratios) < 8:
         raise ValueError("At least eight blocks are required for the length-four bootstrap")
@@ -146,15 +155,15 @@ def main():
         for path in [source, *source.rglob("*")]:
             path.chmod(0o700 if path.is_dir() else 0o600)
         patch = run(["git", "--no-pager", "diff", "--no-ext-diff", "--no-textconv",
-                     "-U0", args.base, args.head, "--", *paths],
+                     "-U2", args.base, args.head, "--", *paths],
                     args.repository.resolve(), env, output / ("proposal-" + str(index) + ".patch"))
         if not patch.strip():
             raise ValueError("Empty candidate patch")
         patch_file = output / ("proposal-" + str(index) + ".patch")
         patch_hashes[module] = hashlib.sha256(patch.encode()).hexdigest()
-        run(["git", "apply", "--no-index", "--unidiff-zero", f"-p{strip}", str(patch_file)],
-            source, dict(env, GIT_CEILING_DIRECTORIES=str(output)),
-            output / ("apply-" + str(index) + ".log"))
+        apply_source_patch(source, patch_file, strip,
+                           dict(env, GIT_CEILING_DIRECTORIES=str(output)),
+                           output / ("apply-" + str(index) + ".log"))
         run(["go", "mod", "edit", f"-replace={module}={source}"], harness, env,
             output / ("mod-edit-" + str(index) + ".log"))
     after = modules(run(["go", "list", "-mod=readonly", "-m", "-json", "all"],
