@@ -5,9 +5,78 @@ computes Datadog APM statistics before sampling, applies the real probabilistic
 sampler, runs sampled-stage processors, and encodes the surviving traces.
 
 The default workload is an arbitrary public example, **not production data or a
-production calibration**. Organization-specific workload specifications,
-processor configurations, telemetry, profiles and comparison reports belong
-outside this repository. Do not commit them here.
+production calibration**. A self-contained, production-informed synthetic
+scenario is provided by [github_workload.py](github_workload.py), described below.
+Raw organization-specific telemetry, internal processor configurations and
+profiles belong outside this repository. Do not commit them here.
+
+## Public GitHub-shaped workload
+
+The workload and runner share version **1.0.0**, stored in [VERSION](VERSION).
+Fetch the immutable `tracebench-v1.0.0` tag from
+https://github.com/githubnext/opentelemetry-collector-contrib and check it out:
+
+```sh
+git clone --branch tracebench-v1.0.0 --single-branch \
+  https://github.com/githubnext/opentelemetry-collector-contrib.git /tmp/tracebench-v1.0.0
+cd /tmp/tracebench-v1.0.0/benchmarks/tracebench
+python3 compare.py --version
+python3 github_workload.py --version
+```
+
+```sh
+python3 github_workload.py > /tmp/github-shaped.json
+TRACEBENCH_SPEC=/tmp/github-shaped.json GOTOOLCHAIN=go1.26.0 GOWORK=off \
+  go test -run '^TestConfiguredCensus$' -v
+GOTOOLCHAIN=go1.26.0 python3 compare.py --candidate batched-tags \
+  --repository /path/to/datadog-agent \
+  --base 83b6d6e01408fb131211a8f10678f83ef7d64dc9 \
+  --head 384e8e598bb6c40446a4c73e835260c340c72468 \
+  --spec /tmp/github-shaped.json --pgo --blocks 16 --iterations 192 \
+  --output /tmp/tracebench-github-shaped
+```
+
+Fetch the candidate commit into the Datadog checkout first, as described below.
+The output directory must not already exist. The generated JSON contains all
+required processor configuration inline; no private files or credentials are
+needed. The runner freezes this specification and uses the same baseline-trained
+PGO profile on both sides.
+
+This scenario carries forward rounded workload parameters fitted during a
+Collector performance investigation at GitHub: a predominantly internal/client
+SDK mixture with a small mesh fraction, roughly 554 spans per batch, protobuf
+without compression, and approximately one-percent sampling. Flow proportions
+were informed by receiver, processor and pre-sampling APM counters; batching was
+informed by processor call counts and bounded request-shape observations.
+Actual values, identities, instrumentation payloads and internal processing rules
+are replaced with synthetic examples. No raw telemetry, internal hostnames,
+service inventories, configuration snapshots or measured fleet totals are included.
+
+The resource-map shape is a hypothesis, not an independently witnessed input
+census: 40 initial resource attributes include 30 synthetic filler keys, and
+three public example metadata attributes are added before statistics. Attribute
+counts, filler lengths and resource grouping were informed by retained-tag/wire
+shape priors. Retained tags have already been processed and do not identify
+original OTLP maps. Internal-span share is an ingress residual rather than a
+directly observed kind count. Missing APM series were not validated as zeros.
+All spans are independent roots; topology, cardinality, concurrency, live heap
+and exporter overhead are not calibrated.
+
+The public transforms illustrate normalization, peer-service extraction and
+sampled filtering, rather than reproducing GitHub's internal pipeline. Therefore
+this is a sanitized derivative of the earlier fitted workload, not its exact
+historical measurement fixture. Its results must be measured independently;
+historical private-workload percentages must not be assigned to this version.
+Change filler counts, grouping or `trace_spans` to test sensitivity; do not assume
+the model uniquely describes production or that its CPU percentage transfers.
+
+An independent 16 A/B + 16 A/A campaign of the public workload and the batched-tag
+candidate above (Go 1.26.0, PGO, 192 iterations/process, 128 observations) measured
+11.17% less pipeline CPU, with conditional 95% interval 7.56–13.76%, and allocated
+bytes +0.052%. Its same-binary A/A apparent reduction was 1.44%, with interval
+−1.49–4.72%. These intervals describe variation on one shared host, not a
+production guarantee or an A/A-adjusted estimate. Both workload/stage/sampling
+censuses matched. The earlier private-fixture result is not substituted here.
 
 ## Run
 

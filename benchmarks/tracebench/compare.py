@@ -12,6 +12,8 @@ import shutil
 import statistics
 import subprocess
 
+VERSION = Path(__file__).with_name("VERSION").read_text().strip()
+
 PATCHES = {
     "map-get": [
         ("go.opentelemetry.io/collector/pdata", 2, ["pdata/pcommon/map.go"]),
@@ -103,6 +105,7 @@ def metrics(text):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=VERSION)
     parser.add_argument("--candidate", choices=PATCHES, required=True)
     parser.add_argument("--repository", type=Path, required=True)
     parser.add_argument("--base", required=True)
@@ -206,7 +209,9 @@ def main():
         if phase == "AB":
             allocations.append(statistics.mean(math.log(v["allocated-B/span"]) for label, v in group if label == "B") -
                                statistics.mean(math.log(v["allocated-B/span"]) for label, v in group if label == "A"))
-    result = {"candidate": args.candidate, "base": args.base, "head": args.head,
+    result = {"benchmark_version": VERSION,
+              "workload_sha256": hashlib.sha256(args.spec.read_bytes()).hexdigest() if args.spec else None,
+              "candidate": args.candidate, "base": args.base, "head": args.head,
               "pgo": args.pgo, "iterations": args.iterations, "blocks": args.blocks,
               "patch_sha256": patch_hashes, "census": expected,
               "cpu": interval(ratios["AB"]), "aa_control": interval(ratios["AA"]),
