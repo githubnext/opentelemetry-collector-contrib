@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+import re
 import unittest
 
 from github_workload import VERSION, workload
@@ -7,8 +9,15 @@ import compare
 
 class GitHubWorkloadTests(unittest.TestCase):
     def test_shared_runner_and_workload_version(self):
-        self.assertEqual(VERSION, "1.0.0")
+        self.assertEqual(VERSION, "1.1.0")
         self.assertEqual(compare.VERSION, VERSION)
+
+    def test_checked_in_go_workload_matches_generator(self):
+        source = Path(__file__).with_name("github_workload_generated.go").read_text()
+        self.assertIn(f'const GitHubWorkloadVersion = "{VERSION}"', source)
+        data = re.search(r"const githubWorkloadJSON = `([\s\S]*)`\n", source)
+        self.assertIsNotNone(data)
+        self.assertEqual(json.loads(data.group(1)), workload())
 
     def test_self_contained_synthetic_workload(self):
         spec = workload()

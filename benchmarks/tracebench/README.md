@@ -6,41 +6,49 @@ sampler, runs sampled-stage processors, and encodes the surviving traces.
 
 The default workload is an arbitrary public example, **not production data or a
 production calibration**. A self-contained, production-informed synthetic
-scenario is provided by [github_workload.py](github_workload.py), described below.
+scenario is checked in as [generated Go code](github_workload_generated.go), described below.
 Raw organization-specific telemetry, internal processor configurations and
 profiles belong outside this repository. Do not commit them here.
 
 ## Public GitHub-shaped workload
 
-The workload and runner share version **1.0.0**, stored in [VERSION](VERSION).
-Fetch the immutable `tracebench-v1.0.0` tag from
+The workload and runner share version **1.1.0**, stored in [VERSION](VERSION).
+Fetch the immutable `tracebench-v1.1.0` tag from
 https://github.com/githubnext/opentelemetry-collector-contrib and check it out:
 
 ```sh
-git clone --branch tracebench-v1.0.0 --single-branch \
-  https://github.com/githubnext/opentelemetry-collector-contrib.git /tmp/tracebench-v1.0.0
-cd /tmp/tracebench-v1.0.0/benchmarks/tracebench
-python3 compare.py --version
-python3 github_workload.py --version
+git clone --branch tracebench-v1.1.0 --single-branch \
+  https://github.com/githubnext/opentelemetry-collector-contrib.git /tmp/tracebench-v1.1.0
+cd /tmp/tracebench-v1.1.0/benchmarks/tracebench
 ```
 
 ```sh
-python3 github_workload.py > /tmp/github-shaped.json
-TRACEBENCH_SPEC=/tmp/github-shaped.json GOTOOLCHAIN=go1.26.0 GOWORK=off \
-  go test -run '^TestConfiguredCensus$' -v
 GOTOOLCHAIN=go1.26.0 python3 compare.py --candidate batched-tags \
   --repository /path/to/datadog-agent \
   --base 83b6d6e01408fb131211a8f10678f83ef7d64dc9 \
   --head 384e8e598bb6c40446a4c73e835260c340c72468 \
-  --spec /tmp/github-shaped.json --pgo --blocks 16 --iterations 192 \
+  --workload github --pgo --blocks 16 --iterations 192 \
   --output /tmp/tracebench-github-shaped
 ```
 
 Fetch the candidate commit into the Datadog checkout first, as described below.
-The output directory must not already exist. The generated JSON contains all
-required processor configuration inline; no private files or credentials are
-needed. The runner freezes this specification and uses the same baseline-trained
-PGO profile on both sides.
+The output directory must not already exist. The checked-in Go workload contains
+all required processor configuration inline; no generation, private files or
+credentials are needed. The runner selects it directly with `--workload github`
+and uses the same baseline-trained PGO profile on both sides. Results record the
+shared version and selected workload.
+
+To run the Go benchmark directly:
+
+```sh
+GOTOOLCHAIN=go1.26.0 GOWORK=off GOMAXPROCS=1 \
+  go test -run '^$' -bench '^BenchmarkGitHubTracePipeline$' -benchmem -benchtime=192x
+```
+
+For maintainers only, regenerate the checked-in source after changing the model:
+`python3 github_workload.py --go > github_workload_generated.go`, then `gofmt`.
+Python tests verify that the checked-in Go data and shared version match the
+generator. External scenarios remain available through `--spec`.
 
 This scenario carries forward rounded workload parameters fitted during a
 Collector performance investigation at GitHub: a predominantly internal/client
@@ -70,7 +78,8 @@ historical private-workload percentages must not be assigned to this version.
 Change filler counts, grouping or `trace_spans` to test sensitivity; do not assume
 the model uniquely describes production or that its CPU percentage transfers.
 
-An independent 16 A/B + 16 A/A campaign of the public workload and the batched-tag
+Version 1.1.0 embeds exactly the same workload data as version 1.0.0; only selection
+and packaging changed. An independent 16 A/B + 16 A/A campaign of that workload and the batched-tag
 candidate above (Go 1.26.0, PGO, 192 iterations/process, 128 observations) measured
 11.17% less pipeline CPU, with conditional 95% interval 7.56–13.76%, and allocated
 bytes +0.052%. Its same-binary A/A apparent reduction was 1.44%, with interval

@@ -111,7 +111,9 @@ def main():
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--spec", type=Path)
+    workload_options = parser.add_mutually_exclusive_group()
+    workload_options.add_argument("--spec", type=Path)
+    workload_options.add_argument("--workload", choices=["default", "github"], default="default")
     parser.add_argument("--blocks", type=int, default=8)
     parser.add_argument("--iterations", type=int, default=256)
     parser.add_argument("--pgo", action="store_true")
@@ -127,6 +129,7 @@ def main():
                GOMEMLIMIT="off", CGO_ENABLED="0", GOAMD64="v1")
     env.pop("TRACEBENCH_CPU_PROFILE", None)
     env.pop("TRACEBENCH_SPEC", None)
+    env["TRACEBENCH_WORKLOAD"] = args.workload
     if args.spec:
         env["TRACEBENCH_SPEC"] = str(args.spec.resolve())
     harness = output / "harness"
@@ -210,6 +213,7 @@ def main():
             allocations.append(statistics.mean(math.log(v["allocated-B/span"]) for label, v in group if label == "B") -
                                statistics.mean(math.log(v["allocated-B/span"]) for label, v in group if label == "A"))
     result = {"benchmark_version": VERSION,
+              "workload": "external" if args.spec else args.workload,
               "workload_sha256": hashlib.sha256(args.spec.read_bytes()).hexdigest() if args.spec else None,
               "candidate": args.candidate, "base": args.base, "head": args.head,
               "pgo": args.pgo, "iterations": args.iterations, "blocks": args.blocks,

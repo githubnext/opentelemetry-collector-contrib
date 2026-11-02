@@ -84,6 +84,13 @@ func DefaultSpec() Spec {
 
 func ReadSpec(path string) (Spec, error) {
 	if path == "" {
+		switch name := os.Getenv("TRACEBENCH_WORKLOAD"); name {
+		case "github":
+			return GitHubSpec()
+		case "", "default":
+		default:
+			return Spec{}, fmt.Errorf("unknown built-in workload %q", name)
+		}
 		s := DefaultSpec()
 		return s, s.Validate()
 	}
